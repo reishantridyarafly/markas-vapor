@@ -17,12 +17,12 @@ Sebelum memulai, pastikan Anda memenuhi persyaratan berikut:
 3. Jalankan perintah berikut untuk mengkloning repositori:
 
    ```shell
-   git clone https://github.com/reishantridyarafly/olivia_cell.git
+   git clone https://github.com/reishantridyarafly/markas-vapor.git
    
 4. Setelah selesai, pindah ke direktori proyek yang baru dibuat:
    
     ```shell
-    cd olivia-cell
+    cd markas-vapor
     
 ## Langkah Langkah 2: Instal Dependensi
 
