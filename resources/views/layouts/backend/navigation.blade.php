@@ -140,12 +140,28 @@
                     </a>
                 </li>
 
+                <li class="nxl-item nxl-hasmenu">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-cpu"></i></span>
+                        <span class="nxl-mtext">FP Growth</span><span class="nxl-arrow"><i
+                                class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        <li class="nxl-item"><a class="nxl-link"
+                                href="{{ route('account.recommendations') }}">Rekomendasi Produk</a></li>
+                        <li class="nxl-item"><a class="nxl-link" href="{{ route('admin.analytics') }}">Analisis FP
+                                Growth</a></li>
+                    </ul>
+                </li>
+
                 <li class="nxl-item {{ request()->routeIs(['address.*']) ? 'active' : '' }}">
                     <a href="{{ route('address.index') }}" class="nxl-link">
                         <span class="nxl-micon"><i class="feather-map-pin"></i></span>
                         <span class="nxl-mtext">Alamat</span>
                     </a>
                 </li>
+
+
             </ul>
         </div>
     </div>

@@ -30,9 +30,14 @@ Route::get('/belanja/katalog/{slug}', [App\Http\Controllers\Frontend\ShopControl
 
 Route::post('/product-views', [App\Http\Controllers\Frontend\ProductViewController::class, 'store'])->name('productViews.store');
 
+Route::get('/product/{productId}/recommendations', [App\Http\Controllers\Backend\ProductRecommendationController::class, 'showRelatedProducts'])->name('products.recommendations');
+
 Auth::routes();
 Route::middleware('auth')->group(function () {
     Route::get('/administrator', [App\Http\Controllers\Backend\AdministratorController::class, 'index'])->name('administrator.index');
+
+    Route::get('/account/recommendations', [App\Http\Controllers\Backend\ProductRecommendationController::class, 'showPersonalizedRecommendations'])->name('account.recommendations');
+    Route::get('/analytics/fp-growth', [App\Http\Controllers\Backend\ProductRecommendationController::class, 'adminAnalytics'])->name('admin.analytics');
 
     Route::get('/keranjang/jumlah', [App\Http\Controllers\Frontend\CartController::class, 'getCartItemCount'])->name('cart.count');
     Route::get('/keranjang/{id}', [App\Http\Controllers\Frontend\CartController::class, 'index'])->name('cart.index');
