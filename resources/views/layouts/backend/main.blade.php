@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zxx">
+<html lang="zxx" class="{{ request()->routeIs(['admin.analytics']) ? 'minimenu' : '' }}">
 
 <head>
     <meta charset="utf-8">

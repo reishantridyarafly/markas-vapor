@@ -90,12 +90,12 @@
                                 <div class="px-4 pt-4">
                                     <div class="d-sm-flex align-items-center justify-content-between">
                                         <div>
-                                            <div class="fs-24 fw-bolder font-montserrat-alt text-uppercase">Olivia Cell
+                                            <div class="fs-24 fw-bolder font-montserrat-alt text-uppercase">{{ config('app.name') }}
                                             </div>
                                             <address class="text-muted">
-                                                Dusun Pahing, RT 002 / RW 013,<br>
-                                                Desa Mekarsari Kec.Jatiwangi,<br>
-                                                Kab. Majalengka
+                                                Jl. Pramuka No.44, Purwawinangun,<br>
+                                                Kec. Kuningan, Kabupaten Kuningan,<br>
+                                                Jawa Barat 45512
                                             </address>
                                         </div>
                                         <div class="lh-lg pt-3 pt-sm-0">

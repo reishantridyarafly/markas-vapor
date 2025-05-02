@@ -21,7 +21,7 @@
         <div class="container-fluid">
             <!-- Analysis Summary Cards -->
             <div class="row mb-4">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="text-muted mb-2">Total Transaksi</h6>
@@ -29,15 +29,15 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                {{-- <div class="col-md-3">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="text-muted mb-2">Periode Analisis</h6>
                             <h3 class="mb-0">{{ $dateRange }}</h3>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-3">
+                </div> --}}
+                <div class="col-md-4">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="text-muted mb-2">Min. Support</h6>
@@ -45,7 +45,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h6 class="text-muted mb-2">Min. Confidence</h6>
@@ -65,21 +65,21 @@
                 </div>
                 <div class="card-body">
                     <form action="{{ route('admin.analytics') }}" method="GET" class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-5">
                             <label class="form-label text-muted">Minimum Support (%)</label>
                             <input type="number" class="form-control" id="min_support" name="min_support"
                                 value="{{ $minSupport }}" min="0.1" max="100" step="0.1">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-5">
                             <label class="form-label text-muted">Minimum Confidence (%)</label>
                             <input type="number" class="form-control" id="min_confidence" name="min_confidence"
                                 value="{{ $minConfidence }}" min="1" max="100" step="1">
                         </div>
-                        <div class="col-md-4">
+                        {{-- <div class="col-md-4">
                             <label class="form-label text-muted">Rentang Tanggal</label>
                             <input type="text" class="form-control date-range-picker" id="date_range" name="date_range"
                                 value="{{ $dateRange }}">
-                        </div>
+                        </div> --}}
                         <div class="col-md-2">
                             <label class="form-label text-muted">Limit Data</label>
                             <input type="number" class="form-control" id="limit" name="limit"
@@ -140,23 +140,20 @@
                     </div>
                 </div>
                 <div class="card-footer bg-white border-top">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-percentage text-primary"></i>
-                                <div class="ms-2">
-                                    <h6 class="mb-0">Support</h6>
-                                    <small class="text-muted">Frekuensi kemunculan kombinasi produk dalam transaksi</small>
-                                </div>
+                    <div class="row g-3 justify-content-center">
+                        <div class="col-md-4 text-center">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-percentage text-primary mb-2"></i>
+                                <h6 class="mb-1">Support</h6>
+                                <small class="text-muted text-center">Frekuensi kemunculan kombinasi produk dalam
+                                    transaksi</small>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-chart-line text-success"></i>
-                                <div class="ms-2">
-                                    <h6 class="mb-0">Confidence</h6>
-                                    <small class="text-muted">Tingkat kepercayaan hubungan antar produk</small>
-                                </div>
+                        <div class="col-md-4 text-center">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-chart-line text-success mb-2"></i>
+                                <h6 class="mb-1">Confidence</h6>
+                                <small class="text-muted text-center">Tingkat kepercayaan hubungan antar produk</small>
                             </div>
                         </div>
                     </div>

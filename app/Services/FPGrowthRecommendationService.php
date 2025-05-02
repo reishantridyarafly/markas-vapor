@@ -35,8 +35,7 @@ class FPGrowthRecommendationService
     */
    public function loadTransactions($limit = null, $dateRange = null)
    {
-      $query = Transaction::where('status', 'completed')
-         ->where('type_transaction', 'online');
+      $query = Transaction::where('status', 'completed');
 
       if ($dateRange) {
          list($startDate, $endDate) = explode('|', $dateRange);
@@ -605,7 +604,7 @@ class FPGrowthRecommendationService
                }
 
                $product = Product::find($productId);
-               if ($product && $product->status == 0 && $product->stock > 0) {
+               if ($product) {
                   $recommendedProducts[] = [
                      'product' => $product,
                      'confidence' => $rule['confidence'],
@@ -622,7 +621,7 @@ class FPGrowthRecommendationService
             }
          }
       }
-
+      
       return $recommendedProducts;
    }
 

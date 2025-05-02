@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Transaction;
 use App\Services\FPGrowthRecommendationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ProductRecommendationController extends Controller
 {
@@ -41,21 +42,40 @@ class ProductRecommendationController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\Response
      */
+    // Di controller
     public function showPersonalizedRecommendations(Request $request)
     {
-        // Dapatkan ID user yang sedang login
         $userId = auth()->id();
 
-        // Dapatkan riwayat transaksi user
+        // Ambil transaksi user yang completed
         $transactions = Transaction::where('user_id', $userId)
             ->where('status', 'completed')
             ->get();
 
-
         $transactionIds = $transactions->pluck('id')->toArray();
-        
-        // Dapatkan rekomendasi produk personalized
-        $recommendedProducts = $this->fpGrowthService->getPersonalizedRecommendations($transactionIds, 5);
+
+        // Buat instance FPGrowth dengan support 0.1% dan confidence 25%
+        $fpService = new FPGrowthRecommendationService(0.1, 25);
+
+        // Dapatkan rekomendasi
+        $recommendedProducts = $fpService->getPersonalizedRecommendations($transactionIds, 5);
+
+        // Fallback jika tidak ada rekomendasi
+        if (empty($recommendedProducts)) {
+            $popularProducts = Product::where('status', 0)
+                ->where('stock', '>', 0)
+                ->orderBy('created_at', 'desc')
+                ->limit(8)
+                ->get();
+
+            foreach ($popularProducts as $product) {
+                $recommendedProducts[] = [
+                    'product' => $product,
+                    'confidence' => 1.0,
+                    'support' => 1.0
+                ];
+            }
+        }
 
         return view('backend.fpgrowth.account', compact('recommendedProducts'));
     }
