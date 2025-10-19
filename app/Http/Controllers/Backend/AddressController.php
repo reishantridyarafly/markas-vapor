@@ -8,24 +8,31 @@ use App\Models\City;
 use App\Models\Province;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 
 class AddressController extends Controller
 {
     public function index()
     {
-        $address = DB::table('address')
-            ->join('provinces', 'address.province_id', '=', 'provinces.id')
-            ->join('cities', 'address.city_id', '=', 'cities.id')
-            ->select('address.*', 'provinces.name as province_name', 'cities.name as city_name', 'cities.postal_code as postal_code')
-            ->where('user_id', auth()->user()->id)
-            ->get();
-        return view('backend.address.index', compact('address'));
+        $addresses = Address::where('user_id', auth()->user()->id)->get();
+
+        return view('backend.address.index', compact('addresses'));
     }
 
     public function create()
     {
-        $provinces = Province::all();
+        $provinces = [];
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'key' => env('RAJAONGKIR_API_KEY'),
+
+        ])->get('https://rajaongkir.komerce.id/api/v1/destination/province');
+
+        if ($response->successful()) {
+            $provinces = $response->json()['data'] ?? [];
+        }
+
         return view('backend.address.add', compact('provinces'));
     }
 
@@ -37,7 +44,8 @@ class AddressController extends Controller
                 'name' => 'required|string',
                 'telephone' => 'required|string|min:11',
                 'province' => 'required|string',
-                'city' => 'required',
+                'district' => 'required|string',
+                'subdistrict' => 'required|string',
                 'street' => 'required|string',
                 'detail_address' => 'required|string',
             ],
@@ -49,7 +57,10 @@ class AddressController extends Controller
                 'telephone.min' => 'Nomor telepon harus memiliki minimal :min karakter.',
                 'province.required' => 'Silakan pilih provinsi terlebih dahulu.',
                 'province.string' => 'Provinsi harus berupa teks.',
-                'city.required' => 'Silakan pilih kota terlebih dahulu.',
+                'district.required' => 'Silakan pilih kota / kabupaten terlebih dahulu.',
+                'district.string' => 'Kota harus berupa teks.',
+                'subdistrict.required' => 'Silakan pilih kecamatan terlebih dahulu.',
+                'subdistrict.string' => 'Kecamatan harus berupa teks.',
                 'street.required' => 'Silakan isi jalan terlebih dahulu.',
                 'street.string' => 'Jalan harus berupa teks.',
                 'detail_address.required' => 'Silakan isi detail alamat terlebih dahulu.',
@@ -64,7 +75,8 @@ class AddressController extends Controller
             $address->name = $request->name;
             $address->telephone = $request->telephone;
             $address->province_id = $request->province;
-            $address->city_id = $request->city;
+            $address->district_id = $request->district;
+            $address->subdistrict_id = $request->subdistrict;
             $address->street = $request->street;
             $address->detail_address = $request->detail_address;
             $address->user_id = auth()->user()->id;
@@ -107,7 +119,8 @@ class AddressController extends Controller
                 'name' => 'required|string',
                 'telephone' => 'required|string|min:11',
                 'province' => 'required|string',
-                'city' => 'required|string',
+                'district' => 'required|string',
+                'subdistrict' => 'required|string',
                 'street' => 'required|string',
                 'detail_address' => 'required|string',
             ],
@@ -119,8 +132,10 @@ class AddressController extends Controller
                 'telephone.min' => 'Nomor telepon harus memiliki minimal :min karakter.',
                 'province.required' => 'Silakan pilih provinsi terlebih dahulu.',
                 'province.string' => 'Provinsi harus berupa teks.',
-                'city.required' => 'Silakan pilih kota terlebih dahulu.',
-                'city.string' => 'Kota harus berupa teks.',
+                'district.required' => 'Silakan pilih kota / kabupaten terlebih dahulu.',
+                'district.string' => 'Kota harus berupa teks.',
+                'subdistrict.required' => 'Silakan pilih kecamatan terlebih dahulu.',
+                'subdistrict.string' => 'Kecamatan harus berupa teks.',
                 'street.required' => 'Silakan isi jalan terlebih dahulu.',
                 'street.string' => 'Jalan harus berupa teks.',
                 'detail_address.required' => 'Silakan isi detail alamat terlebih dahulu.',
@@ -136,7 +151,8 @@ class AddressController extends Controller
             $address->name = $request->name;
             $address->telephone = $request->telephone;
             $address->province_id = $request->province;
-            $address->city_id = $request->city;
+            $address->district_id = $request->district;
+            $address->subdistrict_id = $request->subdistrict;
             $address->street = $request->street;
             $address->detail_address = $request->detail_address;
             $existingDefaultAddress = Address::where('default_address', 0)->where('user_id', auth()->user()->id)->first();
@@ -165,13 +181,29 @@ class AddressController extends Controller
         return Response()->json(['address' => $address, 'message' => 'Data berhasil dihapus!']);
     }
 
-    public function getCity(Request $request)
+    public function getDistrict(Request $request)
     {
-        $province_id = $request->province_id;
-        $city = City::where('province_id', $province_id)->get();
-        echo "<option value=''>-- Pilih Kota --</option>";
-        foreach ($city as $row) {
-            echo "<option value='" . $row->id . "'>" . $row->name . "</option>";
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'key' => env('RAJAONGKIR_API_KEY'),
+
+        ])->get("https://rajaongkir.komerce.id/api/v1/destination/city/{$request->id_province}");
+
+        if ($response->successful()) {
+            return $response->json()['data'] ?? [];
+        }
+    }
+
+    public function getSubdistrict(Request $request)
+    {
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'key' => env('RAJAONGKIR_API_KEY'),
+
+        ])->get("https://rajaongkir.komerce.id/api/v1/destination/district/{$request->id_district}");
+
+        if ($response->successful()) {
+            return $response->json()['data'] ?? [];
         }
     }
 }

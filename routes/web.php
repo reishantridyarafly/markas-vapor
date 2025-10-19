@@ -58,7 +58,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/pengaturan/hapus-foto', [App\Http\Controllers\Backend\ProfileController::class, 'deletePhoto'])->name('profile.deletePhoto');
     Route::post('/profile/hapus/akun', [App\Http\Controllers\Backend\ProfileController::class, 'deleteAccount'])->name('profile.deleteAccount');
 
-    Route::post('/alamat/kota', [App\Http\Controllers\Backend\AddressController::class, 'getCity'])->name('address.get-city');
+    Route::get('/alamat/kabupaten/{id_province}', [App\Http\Controllers\Backend\AddressController::class, 'getDistrict'])->name('address.get-district'); 
+    Route::get('/alamat/kecamatan/{id_district}', [App\Http\Controllers\Backend\AddressController::class, 'getSubdistrict'])->name('address.get-subdistrict'); 
     Route::get('/alamat', [App\Http\Controllers\Backend\AddressController::class, 'index'])->name('address.index');
     Route::get('/alamat/tambah', [App\Http\Controllers\Backend\AddressController::class, 'create'])->name('address.create');
     Route::post('/alamat', [App\Http\Controllers\Backend\AddressController::class, 'store'])->name('address.store');

@@ -16,7 +16,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('telephone');
             $table->char('province_id', '10');
-            $table->char('city_id', '10');
+            $table->char('district_id', '10');
+            $table->char('subdistrict_id', '10');
             $table->text('street');
             $table->text('detail_address');
             $table->boolean('default_address')->default(1)->comment('0 = Default, 1 = Non Default');

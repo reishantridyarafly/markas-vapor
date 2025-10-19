@@ -45,29 +45,31 @@
                     <div class="content-area-body pb-0">
                         <div class="row note-has-grid" id="note-full-container">
                             <!--! BEGIN: [Single Note Item] !-->
-                            @forelse ($address as $row)
+                            @forelse ($addresses as $address)
                                 <div
                                     class="col-xxl-6 col-xl-6 col-lg-4 col-sm-6 single-note-item all-category note-important note-tasks">
                                     <div class="card card-body mb-4 stretch stretch-full">
                                         <span class="side-stick"></span>
-                                        <h5 class="note-title text-truncate w-75 mb-1"> {{ $row->name }}
+                                        <h5 class="note-title text-truncate w-75 mb-1"> {{ $address->name }}
                                         </h5>
-                                        <p class="fs-11 text-muted note-date">{{ $row->telephone }}</p>
+                                        <p class="fs-11 text-muted note-date">{{ $address->telephone }}</p>
                                         <div class="note-content flex-grow-1">
                                             <p class="text-muted note-inner-content text-truncate-3-line">
-                                                {{ $row->detail_address }}</p>
+                                                {{ $address->detail_address }}</p>
                                             <p class="text-muted note-inner-content text-truncate-3-line">
-                                                {{ $row->city_name }}, {{ $row->province_name }}, {{ $row->postal_code }}
+                                                {{ $address->subdistrict_name }}, {{ $address->district_name }},
+                                                {{ $address->province_name }}
                                             </p>
                                         </div>
                                         <div class="d-flex align-items-center gap-1">
-                                            <a href="{{ route('address.edit', $row->id) }}" class="avatar-text avatar-md"><i
+                                            <a href="{{ route('address.edit', $address->id) }}"
+                                                class="avatar-text avatar-md"><i
                                                     class="feather-edit-2 favourite-note"></i></a>
-                                            <span id="btnDelete" data-id="{{ $row->id }}"
+                                            <span id="btnDelete" data-id="{{ $address->id }}"
                                                 class="avatar-text avatar-md"><i
                                                     class="feather-trash-2 remove-note"></i></span>
                                             <div class="ms-auto">
-                                                @if ($row->default_address == 0)
+                                                @if ($address->default_address == 0)
                                                     <span class="badge bg-primary-subtle text-primary">Default</span>
                                                 @endif
                                             </div>
