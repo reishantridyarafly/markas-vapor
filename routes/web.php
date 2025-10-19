@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::post('/register/kota', [App\Http\Controllers\Auth\RegisterController::class, 'getCity'])->name('register.get-city');
+Route::get('/register/kabupaten/{id_province}', [App\Http\Controllers\Auth\RegisterController::class, 'getDistrict'])->name('register.get-district');
+Route::get('/register/kecamatan/{id_district}', [App\Http\Controllers\Auth\RegisterController::class, 'getSubdistrict'])->name('register.get-subdistrict');
 
 Route::get('/', [App\Http\Controllers\Frontend\BerandaController::class, 'index'])->name('beranda.index');
 Route::get('/tentang', [App\Http\Controllers\Frontend\AboutController::class, 'index'])->name('about.index');
@@ -58,8 +59,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/pengaturan/hapus-foto', [App\Http\Controllers\Backend\ProfileController::class, 'deletePhoto'])->name('profile.deletePhoto');
     Route::post('/profile/hapus/akun', [App\Http\Controllers\Backend\ProfileController::class, 'deleteAccount'])->name('profile.deleteAccount');
 
-    Route::get('/alamat/kabupaten/{id_province}', [App\Http\Controllers\Backend\AddressController::class, 'getDistrict'])->name('address.get-district'); 
-    Route::get('/alamat/kecamatan/{id_district}', [App\Http\Controllers\Backend\AddressController::class, 'getSubdistrict'])->name('address.get-subdistrict'); 
+    Route::get('/alamat/kabupaten/{id_province}', [App\Http\Controllers\Backend\AddressController::class, 'getDistrict'])->name('address.get-district');
+    Route::get('/alamat/kecamatan/{id_district}', [App\Http\Controllers\Backend\AddressController::class, 'getSubdistrict'])->name('address.get-subdistrict');
     Route::get('/alamat', [App\Http\Controllers\Backend\AddressController::class, 'index'])->name('address.index');
     Route::get('/alamat/tambah', [App\Http\Controllers\Backend\AddressController::class, 'create'])->name('address.create');
     Route::post('/alamat', [App\Http\Controllers\Backend\AddressController::class, 'store'])->name('address.store');

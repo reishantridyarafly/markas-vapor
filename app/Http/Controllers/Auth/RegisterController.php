@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 
 class RegisterController extends Controller
@@ -57,7 +58,8 @@ class RegisterController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'telephone' => 'required|max:15|unique:users,telephone',
             'province' => 'required',
-            'city' => 'required',
+            'district' => 'required',
+            'subdistrict' => 'required',
             'street' => 'required',
             'detail_address' => 'required',
             'password' => 'required|string|min:8|confirmed',
@@ -76,7 +78,8 @@ class RegisterController extends Controller
             'password.confirmed' => 'Konfirmasi password tidak sama!',
             'password_confirmation.required' => 'Silakan isi konfirmasi password terlebih dahulu!',
             'province.required' => 'Silakan pilih provinsi terlebih dahulu!',
-            'city.required' => 'Silakan kota kota terlebih dahulu!',
+            'district.required' => 'Silakan pilih kota / kabupaten terlebih dahulu!',
+            'subdistrict.required' => 'Silakan pilih kecamatan terlebih dahulu!',
             'street.required' => 'Silakan isi jalan terlebih dahulu!',
             'detail_address.required' => 'Silakan isi detail alamat terlebih dahulu!',
         ]);
@@ -99,7 +102,8 @@ class RegisterController extends Controller
             'name' => $request->first_name . ' ' . $request->last_name,
             'telephone' => $request->telephone,
             'province_id' => $request->province,
-            'city_id' => $request->city,
+            'district_id' => $request->district,
+            'subdistrict_id' => $request->subdistrict,
             'street' => $request->street,
             'detail_address' => $request->detail_address,
             'default_address' => 0,
@@ -109,13 +113,29 @@ class RegisterController extends Controller
         return response()->json($user);
     }
 
-    public function getCity(Request $request)
+    public function getDistrict(Request $request)
     {
-        $province_id = $request->province_id;
-        $city = City::where('province_id', $province_id)->get();
-        echo "<option value=''>-- Pilih Kota --</option>";
-        foreach ($city as $row) {
-            echo "<option value='" . $row->id . "'>" . $row->name . "</option>";
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'key' => env('RAJAONGKIR_API_KEY'),
+
+        ])->get("https://rajaongkir.komerce.id/api/v1/destination/city/{$request->id_province}");
+
+        if ($response->successful()) {
+            return $response->json()['data'] ?? [];
+        }
+    }
+
+    public function getSubdistrict(Request $request)
+    {
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'key' => env('RAJAONGKIR_API_KEY'),
+
+        ])->get("https://rajaongkir.komerce.id/api/v1/destination/district/{$request->id_district}");
+
+        if ($response->successful()) {
+            return $response->json()['data'] ?? [];
         }
     }
 }

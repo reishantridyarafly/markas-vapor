@@ -14,7 +14,7 @@
             <div class="auth-cover-card-wrapper">
                 <div class="auth-cover-card p-sm-5">
                     <div class="wd-80 mb-5">
-                        <img src="{{ asset('backend/assets') }}/images/logo.png" alt="" class="img-fluid" > 
+                        <img src="{{ asset('backend/assets') }}/images/logo.png" alt="" class="img-fluid">
                     </div>
                     <h2 class="fs-20 fw-bolder mb-4">@yield('title')</h2>
                     <h4 class="fs-13 fw-bold mb-2">Daftar Sekarang untuk Mengakses Fitur Lengkap</h4>
@@ -38,32 +38,28 @@
                                 id="telephone">
                             <small class="text-danger errorTelephone mt-2"></small>
                         </div>
-                        <div class="col-12">
-                            <div class="row">
-                                <div class="col-6">
-                                    <div class="mb-4">
-                                        <select name="province" id="province" data-select2-selector="icon"
-                                            class="form-control">
-                                            <option value="">Provinsi</option>
-                                            @foreach ($provinces as $row)
-                                                <option value="{{ $row->id }}">
-                                                    {{ $row->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <small class="text-danger errorProvince mt-2"></small>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="mb-4">
-                                        <select name="city" id="city" class="form-control"
-                                            data-select2-selector="icon">
-                                            <option value="">Kota</option>
-                                        </select>
-                                        <small class="text-danger errorCity mt-2"></small>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="mb-4">
+                            <select name="province" id="province" data-select2-selector="icon" class="form-control">
+                                <option value="">-- Pilih Provinsi --</option>
+                                @foreach ($provinces as $province)
+                                    <option value="{{ $province['id'] }}">
+                                        {{ $province['name'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-danger errorProvince mt-2"></small>
+                        </div>
+                        <div class="mb-4">
+                            <select name="district" id="district" class="form-control" data-select2-selector="icon">
+                                <option value="">-- Pilih Kota / Kabupaten --</option>
+                            </select>
+                            <small class="text-danger errorDistrict mt-2"></small>
+                        </div>
+                        <div class="mb-4">
+                            <select name="subdistrict" id="subdistrict" class="form-control" data-select2-selector="icon">
+                                <option value="">-- Pilih Kemacatan --</option>
+                            </select>
+                            <small class="text-danger errorSubdistrict mt-2"></small>
                         </div>
                         <div class="mb-4">
                             <input type="text" class="form-control" placeholder="Jalan" id="street" name="street">
@@ -180,12 +176,20 @@
                                 $('.errorProvince').html('');
                             }
 
-                            if (response.errors.city) {
-                                $('#city').addClass('is-invalid');
-                                $('.errorCity').html(response.errors.city);
+                            if (response.errors.district) {
+                                $('#district').addClass('is-invalid');
+                                $('.errorDistrict').html(response.errors.district);
                             } else {
-                                $('#city').removeClass('is-invalid');
-                                $('.errorCity').html('');
+                                $('#district').removeClass('is-invalid');
+                                $('.errorDistrict').html('');
+                            }
+
+                            if (response.errors.subdistrict) {
+                                $('#subdistrict').addClass('is-invalid');
+                                $('.errorSubdistrict').html(response.errors.subdistrict);
+                            } else {
+                                $('#subdistrict').removeClass('is-invalid');
+                                $('.errorSubdistrict').html('');
                             }
 
                             if (response.errors.street) {
@@ -239,23 +243,52 @@
                 });
             });
 
-            $('#province').on('change', function() {
-                let id_province = $('#province').val();
+            $('select[name="province"]').on('change', function() {
+                let provinceId = $(this).val();
+                if (provinceId) {
+                    jQuery.ajax({
+                        url: `/register/kabupaten/${provinceId}`,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(response) {
+                            $('select[name="district"]').empty();
+                            $('select[name="district"]').append(
+                                `<option value="">-- Pilih Kota / Kabupaten --</option>`);
+                            $.each(response, function(index, value) {
+                                $('select[name="district"]').append(
+                                    `<option value="${value.id}">${value.name}</option>`
+                                );
+                            });
+                        }
+                    });
+                } else {
+                    $('select[name="district"]').append(
+                        `<option value="">-- Pilih Kota / Kabupaten --</option>`);
+                }
+            });
 
-                $.ajax({
-                    type: "POST",
-                    url: "{{ route('register.get-city') }}",
-                    data: {
-                        province_id: id_province
-                    },
-                    success: function(response) {
-                        $('#city').html(response);
-                    },
-                    error: function(xhr, ajaxOptions, thrownError) {
-                        console.error(xhr.status + "\n" + xhr.responseText + "\n" +
-                            thrownError);
-                    }
-                });
+            $('select[name="district"]').on('change', function() {
+                let districtId = $(this).val();
+                if (districtId) {
+                    jQuery.ajax({
+                        url: `/register/kecamatan/${districtId}`,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(response) {
+                            $('select[name="subdistrict"]').empty();
+                            $('select[name="subdistrict"]').append(
+                                `<option value="">-- Pilih Kecamatan --</option>`);
+                            $.each(response, function(index, value) {
+                                $('select[name="subdistrict"]').append(
+                                    `<option value="${value.id}">${value.name}</option>`
+                                );
+                            });
+                        }
+                    });
+                } else {
+                    $('select[name="subdistrict"]').append(
+                        `<option value="">-- Pilih Kecamatan --</option>`);
+                }
             });
         });
     </script>

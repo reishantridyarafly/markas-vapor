@@ -55,7 +55,7 @@
                                                         class="text-danger">*</span></label>
                                                 <select class="form-control" data-select2-selector="icon" name="province"
                                                     id="province">
-                                                    <option value="">-- Pilih Provinsi -- </option>
+                                                    <option value="">-- Pilih Provinsi --</option>
                                                     @foreach ($provinces as $province)
                                                         <option value="{{ $province['id'] }}">
                                                             {{ $province['name'] }}
