@@ -106,7 +106,16 @@ class AddressController extends Controller
     public function edit($id)
     {
         $address = Address::find($id);
-        $provinces = Province::all();
+        $provinces = [];
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'key' => env('RAJAONGKIR_API_KEY'),
+        ])->get('https://rajaongkir.komerce.id/api/v1/destination/province');
+
+        if ($response->successful()) {
+            $provinces = $response->json()['data'] ?? [];
+        }
+        
         return view('backend.address.edit', compact('provinces', 'address'));
     }
 

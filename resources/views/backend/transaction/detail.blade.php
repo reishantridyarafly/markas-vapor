@@ -122,9 +122,9 @@
                                                     {{ $transaction->address->name }}<br>
                                                     {{ $transaction->address->telephone }}<br>
                                                     {{ $transaction->address->detail_address }}<br>
-                                                    <strong>{{ optional($transaction->address)->city_name }}</strong>,
+                                                    <strong>{{ optional($transaction->address)->subdistrict_name }}</strong>,
+                                                    <strong>{{ optional($transaction->address)->district_name }}</strong>,
                                                     <strong>{{ optional($transaction->address)->province_name }}</strong>,
-                                                    <strong>{{ optional($transaction->address)->postal_code }}</strong>
                                                 @else
                                                     Tidak dikirim
                                                 @endif

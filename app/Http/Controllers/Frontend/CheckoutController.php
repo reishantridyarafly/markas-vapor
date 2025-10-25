@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
+use App\Models\Address;
 use App\Models\BankAccount;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -20,80 +21,115 @@ class CheckoutController extends Controller
     public function directCheckout(Request $request)
     {
         $product = Product::find($request->id);
-        $address = DB::table('address')
-            ->join('provinces', 'address.province_id', '=', 'provinces.id')
-            ->join('cities', 'address.city_id', '=', 'cities.id')
-            ->select('address.*', 'provinces.name as province_name', 'cities.name as city_name', 'cities.postal_code as kode_pos')
-            ->where('user_id', auth()->user()->id)
-            ->get();
+        $addresses = Address::where('user_id', auth()->user()->id)->get();
         $qty = $request->qty;
-        $weight = $request->weight;
+        $weight = $qty * $request->weight;
         $rekening = BankAccount::all();
-        return view('frontend.checkout.direct', compact(['qty', 'weight', 'product', 'address', 'rekening']));
+        $subtotal = $qty * $product->after_price;
+        return view('frontend.checkout.direct', compact(['qty', 'weight', 'product', 'addresses', 'rekening', 'subtotal']));
     }
 
-    public function getAddressDetails(Request $request)
+    public function getAddressDetails($id)
     {
-        $address = DB::table('address')
-            ->join('provinces', 'address.province_id', '=', 'provinces.id')
-            ->join('cities', 'address.city_id', '=', 'cities.id')
-            ->select('provinces.name as province_name', 'cities.name as city_name', 'cities.id as city_id',)
-            ->where('address.id', $request->id)
-            ->first();
-        if ($address) {
-            return response()->json($address);
-        } else {
-            return response()->json(['error' => 'Alamat tidak ditemukan'], 404);
+        $address = Address::find($id);
+
+        if (!$address) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Alamat tidak ditemukan'
+            ], 404);
         }
+
+        if ($address->user_id != auth()->user()->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'province_id' => $address->provinsi_id,
+            'province_name' => $address->province_name,
+            'district_id' => $address->district_id,
+            'district_name' => $address->district_name,
+            'subdistrict_id' => $address->subdistrict_id,
+            'subdistrict_name' => $address->subdistrict_name,
+            'street' => $address->street,
+            'detail_address' => $address->detail_address,
+            'name' => $address->name,
+            'telephone' => $address->telephone,
+        ]);
     }
 
     public function checkOngkir(Request $request)
     {
         try {
-            $origin = 80;
-            $destination = $request->city;
-            $weight = $request->weight;
-            $courier = $request->courier;
+            $validator = Validator::make($request->all(), [
+                'district_id' => 'required',
+                'courier' => 'required|in:jne,pos,tiki',
+                'weight' => 'required|numeric|min:1',
+            ]);
 
-            $response = Http::withOptions(['verify' => false])
-                ->withHeaders([
-                    'key' => env('RAJAONGKIR_API_KEY')
-                ])
-                ->post('https://api.rajaongkir.com/starter/cost', [
-                    'origin' => $origin,
-                    'destination' => $destination,
-                    'weight' => $weight,
-                    'courier' => $courier
-                ]);
-
-            $responseData = $response->json();
-
-            Log::info('RajaOngkir API response:', $responseData);
-
-            if (isset($responseData['rajaongkir']) && isset($responseData['rajaongkir']['results']) && count($responseData['rajaongkir']['results']) > 0) {
-                $costs = $responseData['rajaongkir']['results'][0]['costs'];
-
-                $shippingOptions = '<option value="">Pilih Ongkos Kirim</option>';
-                foreach ($costs as $val) {
-                    $cost = $val['cost'][0]['value'];
-                    $formattedCost = number_format($cost, 0, ',', '.');
-                    $shippingOptions .= "<option value='{$val['cost'][0]['value']}'>{$val['service']} | {$val['description']} | Rp {$formattedCost} | Estimasi {$val['cost'][0]['etd']}</option>";
-                }
-
-                return response()->json(['status' => true, 'shipping_cost' => $shippingOptions]);
-            } else {
+            if ($validator->fails()) {
                 return response()->json([
-                    'status' => false,
-                    'message' => isset($responseData['rajaongkir']['status']['description']) ? $responseData['rajaongkir']['status']['description'] : 'No results found in the API response',
-                    'data' => []
+                    'success' => false,
+                    'shipping_cost' => '<option value="">Data tidak lengkap</option>'
                 ]);
             }
-        } catch (\Throwable $th) {
-            Log::error('Error in checkOngkir:', ['error' => $th->getMessage()]);
+
+            $weight = $request->input('weight');
+
+            if ($weight < 1) {
+                $weight = 1;
+            }
+
+            $response = Http::asForm()->withHeaders([
+                'Accept' => 'application/json',
+                'key' => env('RAJAONGKIR_API_KEY'),
+            ])->post('https://rajaongkir.komerce.id/api/v1/calculate/domestic-cost', [
+                'origin' => 1224,
+                'destination' => $request->input('district_id'),
+                'weight' => $weight,
+                'courier' => $request->input('courier'),
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json()['data'] ?? [];
+
+                $options = '<option value="">Pilih Layanan Pengiriman</option>';
+
+                if (!empty($data)) {
+                    foreach ($data as $item) {
+                        $courierName = strtoupper($item['code']);
+                        $service = $item['service'];
+                        $description = $item['description'];
+                        $cost = $item['cost'];
+                        $etd = $item['etd'];
+
+                        $label = "{$courierName} - {$service} ({$description}) - Rp " . number_format($cost, 0, ',', '.') . " - Estimasi: {$etd}";
+
+                        $options .= "<option value='{$cost}' data-service='{$service}' data-courier='{$courierName}' data-etd='{$etd}'>{$label}</option>";
+                    }
+                } else {
+                    $options = '<option value="">Tidak ada layanan tersedia</option>';
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'ongkir' => $options
+                ]);
+            }
+
             return response()->json([
-                'status' => false,
-                'message' => $th->getMessage(),
-                'data' => []
+                'success' => false,
+                'ongkir' => '<option value="">Gagal memuat data ongkir</option>'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'ongkir' => '<option value="">Terjadi kesalahan</option>',
+                'message' => $e->getMessage()
             ]);
         }
     }
@@ -204,12 +240,7 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index', $userId)->with('error', 'Pilih setidaknya satu item untuk checkout.');
         }
 
-        $address = DB::table('address')
-            ->join('provinces', 'address.province_id', '=', 'provinces.id')
-            ->join('cities', 'address.city_id', '=', 'cities.id')
-            ->select('address.*', 'provinces.name as province_name', 'cities.name as city_name', 'cities.postal_code as kode_pos')
-            ->where('user_id', $userId)
-            ->get();
+        $addresses = Address::where('user_id', auth()->user()->id)->get();
 
         $rekening = BankAccount::all();
 
@@ -217,7 +248,11 @@ class CheckoutController extends Controller
             return $item->quantity * $item->product->after_price;
         });
 
-        return view('frontend.checkout.cart', compact('items', 'address', 'rekening', 'subtotal'));
+        $totalWeight = $items->sum(function ($row) {
+            return $row->quantity * $row->product->weight;
+        });
+
+        return view('frontend.checkout.cart', compact('items', 'addresses', 'rekening', 'subtotal', 'totalWeight'));
     }
 
     public function storeCart(Request $request)

@@ -80,6 +80,8 @@
 
                                             <input class="input-text input-text--primary-style" type="text"
                                                 id="billing-phone" value="{{ auth()->user()->telephone }}" disabled>
+                                            <input type="hidden" name="total_weight" id="total_weight"
+                                                value="{{ $totalWeight }}">
                                         </div>
                                         <!--====== End - PHONE ======-->
 
@@ -92,10 +94,10 @@
                                             <select class="select-box select-box--primary-style" id="address"
                                                 name="address">
                                                 <option value="">Pilih Alamat</option>
-                                                @forelse ($address as $row)
-                                                    <option value="{{ $row->id }}"
-                                                        {{ $row->default_address == 0 ? 'selected' : '' }}>
-                                                        {{ $row->detail_address }}</option>
+                                                @forelse ($addresses as $address)
+                                                    <option value="{{ $address->id }}"
+                                                        {{ $address->default_address == 0 ? 'selected' : '' }}>
+                                                        {{ $address->detail_address }}</option>
                                                 @empty
                                                     <option value="">Data tidak tersedia</option>
                                                 @endforelse
@@ -118,10 +120,21 @@
                                         <!--====== STATE/PROVINCE ======-->
                                         <div class="u-s-m-b-15">
                                             <!--====== Select Box ======-->
-                                            <label class="gl-label" for="city">KOTA *</label>
-                                            <input type="hidden" name="city_id" id="city_id" disabled>
+                                            <label class="gl-label" for="district">KOTA / KABUPATEN *</label>
+                                            <input type="hidden" name="district_id" id="district_id" disabled>
                                             <input class="input-text input-text--primary-style" type="text"
-                                                id="city" name="city" disabled>
+                                                id="district" name="district" disabled>
+                                            <!--====== End - Select Box ======-->
+                                        </div>
+                                        <!--====== End - STATE/PROVINCE ======-->
+
+                                        <!--====== STATE/PROVINCE ======-->
+                                        <div class="u-s-m-b-15">
+                                            <!--====== Select Box ======-->
+                                            <label class="gl-label" for="subdistrict">KECAMATAN *</label>
+                                            <input type="hidden" name="subdistrict_id" id="subdistrict_id" disabled>
+                                            <input class="input-text input-text--primary-style" type="text"
+                                                id="subdistrict" name="subdistrict" disabled>
                                             <!--====== End - Select Box ======-->
                                         </div>
                                         <!--====== End - STATE/PROVINCE ======-->
@@ -247,7 +260,8 @@
                                         </div>
                                         <div class="o-summary__section u-s-m-b-30">
                                             <div class="o-summary__box">
-                                                <h1 class="checkout-f__h1">BUKTI PEMBAYARAN (<small class="text-muted">Format: JPG, JPEG, PNG, WEBP, SVG</small>)</h1>
+                                                <h1 class="checkout-f__h1">BUKTI PEMBAYARAN (<small
+                                                        class="text-muted">Format: JPG, JPEG, PNG, WEBP, SVG</small>)</h1>
                                                 <div class="ship-b">
                                                     <div class="u-s-m-b-15">
                                                         <!--====== Select Box ======-->
@@ -295,6 +309,71 @@
             });
         }
 
+        function resetCheckoutForm() {
+            $('#province').val('');
+            $('#district_id').val('');
+            $('#district').val('');
+            $('#subdistrict_id').val('');
+            $('#subdistrict').val('');
+            $('#courier').val('');
+            $('#shipping_cost').empty().append('<option value="">Pilih kurir terlebih dahulu&hellip;</option>');
+            updateTotalPayment(0);
+        }
+
+        function loadAddressDetails(addressId) {
+            $.ajax({
+                url: `/pembayaran/get-address-details/${addressId}`,
+                type: 'POST',
+                data: {
+                    id: addressId
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        $('#province').val(response.province_name);
+                        $('#district_id').val(response.district_id);
+                        $('#district').val(response.district_name);
+                        $('#subdistrict_id').val(response.subdistrict_id);
+                        $('#subdistrict').val(response.subdistrict_name);
+
+                        $('#courier').val('');
+                        $('#shipping_cost').empty().append(
+                            '<option value="">Pilih kurir terlebih dahulu&hellip;</option>');
+                        updateTotalPayment(0);
+
+                        // Clear errors
+                        $('.errorAddress').html('');
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message || 'Gagal memuat data alamat'
+                        });
+                    }
+                },
+                error: function(xhr, ajaxOptions, thrownError) {
+                    console.error(xhr.status + "\n" + xhr.responseText + "\n" + thrownError);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Terjadi kesalahan saat mengambil data alamat.'
+                    });
+                }
+            });
+        }
+
+        function updateTotalPayment(ongkir) {
+            let subtotal = parseFloat('{{ $subtotal }}');
+            let total = subtotal + ongkir;
+
+            $('#total_ongkir_text').text(formatCurrency(ongkir));
+            $('#subtotal_text').text(formatCurrency(subtotal));
+            $('#total_keseluruhan_text').text(formatCurrency(total));
+            $('#total').val(total);
+            $('#total_ongkir').val(ongkir);
+            $('#subtotal').val(subtotal);
+        }
+
         $(document).ready(function() {
             $.ajaxSetup({
                 headers: {
@@ -302,9 +381,26 @@
                 }
             });
 
-            function getAddressDetails(addressId) {
+            var initialAddressId = $('#address').val();
+            if (initialAddressId) {
+                loadAddressDetails(initialAddressId);
+            }
+
+            $('#address').on('change', function() {
+                var addressId = $(this).val();
+
+                if (!addressId) {
+                    resetCheckoutForm();
+                    return;
+                }
+
+                loadAddressDetails(addressId);
+            });
+
+            var addressId = $('#address').val();
+            if (addressId) {
                 $.ajax({
-                    url: "{{ url('/pembayaran/get-address-details/') }}" + "/" + addressId,
+                    url: "{{ url('/pembayaran/get-address-details/"+addressId+"') }}",
                     type: 'POST',
                     data: {
                         id: addressId
@@ -312,8 +408,10 @@
                     dataType: 'json',
                     success: function(response) {
                         $('#province').val(response.province_name);
-                        $('#city_id').val(response.city_id);
-                        $('#city').val(response.city_name);
+                        $('#district_id').val(response.district_id);
+                        $('#district').val(response.district_name);
+                        $('#subdistrict_id').val(response.subdistrict_id);
+                        $('#subdistrict').val(response.subdistrict_name);
                     },
                     error: function(xhr, ajaxOptions, thrownError) {
                         console.error(xhr.status + "\n" + xhr.responseText + "\n" +
@@ -322,68 +420,109 @@
                 });
             }
 
-            var addressId = $('#address').val();
-            if (addressId) {
-                getAddressDetails(addressId);
-            } else {
-                $('#province').val('');
-                $('#city').val('');
-            }
-
             $('#address').on('change', function() {
-                var newAddressId = $(this).val();
-                if (newAddressId) {
-                    getAddressDetails(newAddressId);
+                var addressId = $(this).val();
+                if (addressId) {
+                    $.ajax({
+                        url: "{{ url('/pembayaran/get-address-details/"+addressId+"') }}",
+                        type: 'POST',
+                        data: {
+                            id: addressId
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            $('#province').val(response.province_name);
+                            $('#district_id').val(response.district_id);
+                            $('#district').val(response.district_name);
+                            $('#subdistrict_id').val(response.subdistrict_id);
+                            $('#subdistrict').val(response.subdistrict_name);
+                            $('#shipping_cost').empty();
+                        },
+                    });
                 } else {
                     $('#province').val('');
-                    $('#city').val('');
+                    $('#district').val('');
+                    $('#subdistrict').val('');
                 }
             });
 
             $('#courier').on('change', function() {
-                let city = $('#city_id').val();
+                let districtId = $('#district_id').val();
+                let subdistrictId = $('#subdistrict_id').val();
                 let courier = $('#courier').val();
-                let weight = $('#weight').val();
-                $('#shipping_cost').empty();
+                let weight = $('#total_weight').val();
+
+                $('.errorCourier').html('');
+
+                if (!districtId) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Peringatan',
+                        text: 'Silakan pilih alamat terlebih dahulu'
+                    });
+                    $(this).val('');
+                    return;
+                }
+
+                if (!courier) {
+                    $('#shipping_cost').empty().append(
+                        '<option value="">Pilih kurir terlebih dahulu&hellip;</option>');
+                    updateTotalPayment(0);
+                    return;
+                }
+
+                // Show loading
+                $('#shipping_cost').empty().append(
+                    '<option value="">Memuat layanan pengiriman...</option>');
+                $('#shipping_cost').prop('disabled', true);
 
                 $.ajax({
                     type: "POST",
                     url: "{{ route('checkout.check-ongkir') }}",
                     data: {
-                        city: city,
+                        district_id: districtId,
                         courier: courier,
-                        weight: weight,
+                        weight: weight
                     },
                     success: function(response) {
-                        $('#shipping_cost').html(response.shipping_cost);
+                        $('#shipping_cost').prop('disabled', false);
+                        if (response.success) {
+                            $('#shipping_cost').html(response.ongkir);
+                        } else {
+                            $('#shipping_cost').html(
+                                '<option value="">Gagal memuat layanan</option>');
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Gagal memuat data ongkir'
+                            });
+                        }
                     },
                     error: function(xhr, ajaxOptions, thrownError) {
                         console.error(xhr.status + "\n" + xhr.responseText + "\n" +
                             thrownError);
+                        $('#shipping_cost').prop('disabled', false);
+                        $('#shipping_cost').html('<option value="">Gagal memuat data</option>');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Terjadi kesalahan saat mengambil ongkir'
+                        });
                     }
                 });
             });
 
-            let subtotal = 0;
-            $('input[name="unit_price"]').each(function() {
-                let price = parseFloat($(this).val());
-                let quantity = parseInt($(this).closest('.o-card__info-wrap').find('.o-card__quantity')
-                    .text().split('x')[1].trim());
-                subtotal += price * quantity;
-            });
-
             $('#shipping_cost').on('change', function() {
                 let shipping_cost = parseFloat($(this).val());
-                let total = subtotal + shipping_cost;
 
-                $('#total_ongkir_text').text(formatCurrency(shipping_cost));
-                $('#total_ongkir').val(shipping_cost);
+                $('.errorShippingCost').html('');
 
-                $('#subtotal_text').text(formatCurrency(subtotal));
-                $('#subtotal').val(subtotal);
+                if (!shipping_cost || isNaN(shipping_cost)) {
+                    updateTotalPayment(0);
+                    return;
+                }
 
-                $('#total_keseluruhan_text').text(formatCurrency(total));
-                $('#total').val(total);
+                updateTotalPayment(shipping_cost);
             });
 
             $('#form').submit(function(e) {

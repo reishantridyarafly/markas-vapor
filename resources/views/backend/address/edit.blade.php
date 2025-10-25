@@ -53,32 +53,43 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-lg-6 col-md-6">
+                                        <div class="col-lg-4 col-md-6">
                                             <div class="form-group mb-3">
                                                 <label for="province" class="form-label">Provinsi <span
                                                         class="text-danger">*</span></label>
                                                 <select class="form-control" data-select2-selector="icon" name="province"
                                                     id="province">
                                                     <option value="">-- Pilih Provinsi -- </option>
-                                                    @foreach ($provinces as $row)
-                                                        <option value="{{ $row->id }}"
-                                                            {{ $row->id == $address->province_id ? 'selected' : '' }}>
-                                                            {{ $row->name }}
+                                                    @foreach ($provinces as $province)
+                                                        <option value="{{ $province['id'] }}"
+                                                            {{ $province['id'] == $address->province_id ? 'selected' : '' }}>
+                                                            {{ $province['name'] }}
                                                         </option>
                                                     @endforeach
                                                 </select>
                                                 <small class="text-danger errorProvince mt-2"></small>
                                             </div>
                                         </div>
-                                        <div class="col-lg-6 col-md-6">
+                                        <div class="col-lg-4 col-md-6">
                                             <div class="form-group mb-3">
-                                                <label for="city" class="form-label">Kota <span
+                                                <label for="district" class="form-label">Kota / Kabupaten <span
                                                         class="text-danger">*</span></label>
-                                                <select class="form-control" data-select2-selector="icon" name="city"
-                                                    id="city">
-                                                    <option value="">-- Pilih Kota --</option>
+                                                <select class="form-control" data-select2-selector="icon" name="district"
+                                                    id="district">
+                                                    <option value="">-- Pilih Kota / Kabupaten --</option>
                                                 </select>
-                                                <small class="text-danger errorCity mt-2"></small>
+                                                <small class="text-danger errorDistrict mt-2"></small>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-4 col-md-6">
+                                            <div class="form-group mb-3">
+                                                <label for="subdistrict" class="form-label">Kecamatan <span
+                                                        class="text-danger">*</span></label>
+                                                <select class="form-control" data-select2-selector="icon" name="subdistrict"
+                                                    id="subdistrict">
+                                                    <option value="">-- Pilih Kecamatan --</option>
+                                                </select>
+                                                <small class="text-danger errorSubdistrict mt-2"></small>
                                             </div>
                                         </div>
                                         <div class="col-lg-12 col-md-6">
@@ -138,27 +149,99 @@
             });
 
             let provinceId = {{ $address->province_id ?? 'null' }};
+            let districtId = {{ $address->district_id ?? 'null' }};
+            let subdistrictId = {{ $address->subdistrict_id ?? 'null' }};
 
             if (provinceId) {
-                $('#province').val(provinceId).trigger('change');
-
                 $.ajax({
-                    type: "POST",
-                    url: "{{ route('address.get-city') }}",
-                    data: {
-                        province_id: provinceId
-                    },
+                    url: `/alamat/kabupaten/${provinceId}`,
+                    type: "GET",
+                    dataType: "json",
                     success: function(response) {
-                        $('#city').html(response);
-                        let cityId = {{ $address->city_id ?? 'null' }};
-                        $('#city').val(cityId).trigger('change');
-                    },
-                    error: function(xhr, ajaxOptions, thrownError) {
-                        console.error(xhr.status + "\n" + xhr.responseText + "\n" +
-                            thrownError);
+                        $('select[name="district"]').empty();
+                        $('select[name="district"]').append(
+                            `<option value="">-- Pilih kota / kabupaten --</option>`);
+                        $.each(response, function(index, value) {
+                            let selected = value.id == districtId ? 'selected' : '';
+                            $('select[name="district"]').append(
+                                `<option value="${value.id}" ${selected}>${value.name}</option>`
+                            );
+                        });
+
+                        $('select[name="district"]').trigger('change.select2');
+
+                        if (districtId) {
+                            loadSubdistrict(districtId, subdistrictId);
+                        }
                     }
                 });
             }
+
+            function loadSubdistrict(districtId, selectedSubdistrictId = null) {
+                $.ajax({
+                    url: `/alamat/kecamatan/${districtId}`,
+                    type: "GET",
+                    dataType: "json",
+                    success: function(response) {
+                        $('select[name="subdistrict"]').empty();
+                        $('select[name="subdistrict"]').append(
+                            `<option value="">-- Pilih Kecamatan --</option>`);
+                        $.each(response, function(index, value) {
+                            let selected = value.id == selectedSubdistrictId ? 'selected' : '';
+                            $('select[name="subdistrict"]').append(
+                                `<option value="${value.id}" ${selected}>${value.name}</option>`
+                            );
+                        });
+
+                        // Trigger select2 update
+                        $('select[name="subdistrict"]').trigger('change.select2');
+                    }
+                });
+            }
+
+            $('select[name="province"]').on('change', function() {
+                let provinceId = $(this).val();
+                if (provinceId) {
+                    $.ajax({
+                        url: `/alamat/kabupaten/${provinceId}`,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(response) {
+                            $('select[name="district"]').empty();
+                            $('select[name="district"]').append(
+                                `<option value="">-- Pilih Kota / Kabupaten --</option>`);
+                            $.each(response, function(index, value) {
+                                $('select[name="district"]').append(
+                                    `<option value="${value.id}">${value.name}</option>`
+                                );
+                            });
+                        }
+                    });
+
+                    // Reset kecamatan
+                    $('select[name="subdistrict"]').empty();
+                    $('select[name="subdistrict"]').append(
+                        `<option value="">-- Pilih Kecamatan --</option>`);
+                } else {
+                    $('select[name="district"]').empty();
+                    $('select[name="district"]').append(
+                        `<option value="">-- Pilih Kota / Kabupaten --</option>`);
+                    $('select[name="subdistrict"]').empty();
+                    $('select[name="subdistrict"]').append(
+                        `<option value="">-- Pilih Kecamatan --</option>`);
+                }
+            });
+
+            $('select[name="district"]').on('change', function() {
+                let cityId = $(this).val();
+                if (cityId) {
+                    loadSubdistrict(cityId);
+                } else {
+                    $('select[name="subdistrict"]').empty();
+                    $('select[name="subdistrict"]').append(
+                        `<option value="">-- Pilih Kecamatan --</option>`);
+                }
+            });
 
             $('#form').submit(function(e) {
                 e.preventDefault();
@@ -240,25 +323,6 @@
                             thrownError);
                     }
                 });
-            });
-        });
-
-        $('#province').on('change', function() {
-            let id_province = $('#province').val();
-
-            $.ajax({
-                type: "POST",
-                url: "{{ route('address.get-city') }}",
-                data: {
-                    province_id: id_province
-                },
-                success: function(response) {
-                    $('#city').html(response);
-                },
-                error: function(xhr, ajaxOptions, thrownError) {
-                    console.error(xhr.status + "\n" + xhr.responseText + "\n" +
-                        thrownError);
-                }
             });
         });
     </script>

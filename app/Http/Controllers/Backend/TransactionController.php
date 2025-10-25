@@ -113,7 +113,7 @@ class TransactionController extends Controller
     public function create()
     {
         $users = User::where('type', 2)->orderBy('first_name', 'asc')->get();
-        $products = Product::orderBy('name', 'asc')->where('stock', '>', 0)->get();
+        $products = Product::with('catalog')->orderBy('name', 'asc')->where('stock', '>', 0)->get();
         return view('backend.transaction.add', compact(['users', 'products']));
     }
 
@@ -169,11 +169,7 @@ class TransactionController extends Controller
 
     public function detail($id)
     {
-        $transaction = Transaction::with(['details', 'address' => function ($query) {
-            $query->join('provinces', 'address.province_id', '=', 'provinces.id')
-                ->join('cities', 'address.city_id', '=', 'cities.id')
-                ->select('address.*', 'provinces.name as province_name', 'cities.name as city_name', 'cities.postal_code as postal_code');
-        }])->find($id);
+        $transaction = Transaction::with(['details'])->find($id);
 
         $months = [
             'January' => 'Januari',
@@ -344,7 +340,7 @@ class TransactionController extends Controller
                 foreach ($request->file('proof') as $file) {
                     $filename = 'refund_' . time() . '_' . $file->getClientOriginalName();
                     $file->storeAs('uploads/refunds', $filename, 'public');
-            
+
                     $refundProof = new RefundProof();
                     $refundProof->refund_id = $refund->id;
                     $refundProof->file_refund = $filename;

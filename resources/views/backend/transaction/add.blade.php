@@ -92,8 +92,8 @@
                                                                         data-icon="feather-archive"
                                                                         data-price="{{ $product->after_price }}"
                                                                         data-stock="{{ $product->stock }}">
-                                                                        {{ $product->name }} | {{ $product->ram }} |
-                                                                        {{ $product->capacity }}
+                                                                        {{ $product->name }} |
+                                                                        {{ $product->catalog->name }}
                                                                     </option>
                                                                 @endforeach
                                                             </select>
@@ -366,6 +366,24 @@
 
             $('#form').submit(function(e) {
                 e.preventDefault();
+
+                var typePayment = $('#type_payment').val();
+
+                if (typePayment === 'cash') {
+                    var total = unformatRupiah($('#total').val());
+                    var cash = unformatRupiah($('#cash').val());
+
+                    if (cash < total) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Uang Tunai Kurang!',
+                            text: 'Jumlah uang tunai tidak mencukupi untuk membayar transaksi ini.',
+                            confirmButtonText: 'OK'
+                        });
+                        return false;
+                    }
+                }
+
                 $.ajax({
                     data: $(this).serialize(),
                     url: "{{ route('transaction.store') }}",
