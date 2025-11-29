@@ -140,17 +140,23 @@
                     </a>
                 </li>
 
-                <li class="nxl-item nxl-hasmenu">
+                <li
+                    class="nxl-item nxl-hasmenu {{ request()->routeIs(['account.recommendations', 'admin.analytics']) ? 'active nxl-trigger' : '' }}">
                     <a href="javascript:void(0);" class="nxl-link">
                         <span class="nxl-micon"><i class="feather-cpu"></i></span>
                         <span class="nxl-mtext">FP Growth</span><span class="nxl-arrow"><i
                                 class="feather-chevron-right"></i></span>
                     </a>
                     <ul class="nxl-submenu">
-                        <li class="nxl-item"><a class="nxl-link"
-                                href="{{ route('account.recommendations') }}">Rekomendasi Produk</a></li>
-                        <li class="nxl-item"><a class="nxl-link" href="{{ route('admin.analytics') }}">Analisis FP
-                                Growth</a></li>
+                        <li class="nxl-item {{ request()->routeIs(['account.recommendations']) ? 'active' : '' }}"><a
+                                class="nxl-link" href="{{ route('account.recommendations') }}">Rekomendasi Produk</a>
+                        </li>
+                        @if (auth()->user()->type != 'Pelanggan')
+                            <li class="nxl-item {{ request()->routeIs(['admin.analytics']) ? 'active' : '' }}"><a
+                                    class="nxl-link" href="{{ route('admin.analytics') }}">Analisis
+                                    FP
+                                    Growth</a></li>
+                        @endif
                     </ul>
                 </li>
 
@@ -160,7 +166,6 @@
                         <span class="nxl-mtext">Alamat</span>
                     </a>
                 </li>
-
 
             </ul>
         </div>
