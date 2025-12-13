@@ -120,7 +120,7 @@
 
                                                 <span class="input-counter__minus fas fa-minus"></span>
 
-                                                <input class="input-counter__text input-counter--text-primary-style"
+                                                <input class="input-counter__text input-counter--text-primary-style qty_display"
                                                     id="qty" name="qty" value="1" type="text"
                                                     data-min="1" data-max="1000">
 
@@ -593,6 +593,59 @@
                 }
             });
 
+            const maxStock = {{ $product->stock }};
+            $('.qty_display').attr('data-max', maxStock);
+
+            $('.qty_display').on('change', function() {
+                let qty = parseInt($(this).val());
+
+                if (qty > maxStock) {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: "warning",
+                        title: `Stok tersedia hanya ${maxStock} item`
+                    });
+                    $(this).val(maxStock);
+                }
+
+                if (qty < 1 || isNaN(qty)) {
+                    $(this).val(1);
+                }
+            });
+
+            $('.input-counter__plus').on('click', function() {
+                let qty = parseInt($('.qty_display').val());
+
+                if (qty >= maxStock) {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: "warning",
+                        title: `Stok tersedia hanya ${maxStock} item`
+                    });
+                    return false;
+                }
+            });
+
             $('body').on('click', '.product-view', function() {
                 let productId = $(this).data('id');
                 $.ajax({
@@ -613,7 +666,39 @@
 
             $('body').on('click', '#addCart', function() {
                 let id = $(this).data('id');
-                let qty = $('#qty').val();
+                let qty = $('.qty_display').val();
+
+
+                if (qty > maxStock) {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: "warning",
+                        title: `Stok tersedia hanya ${maxStock} item`
+                    });
+                    $(this).val(maxStock);
+                }
+
+                if (qty < 1 || isNaN(qty)) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Jumlah Tidak Valid',
+                        text: 'Jumlah minimal adalah 1 item',
+                        confirmButtonColor: '#3085d6',
+                    });
+                    $('.qty_display').val(1);
+                    return false;
+                }
+
                 $.ajax({
                     type: "POST",
                     url: "/keranjang/tambah/" + id,
@@ -655,6 +740,72 @@
                 });
             });
 
+            $('.pd-detail__form').on('submit', function(e) {
+                let qty = parseInt($('.qty_display').val());
+
+
+                if (qty > maxStock) {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: "warning",
+                        title: `Stok tersedia hanya ${maxStock} item`
+                    });
+                    $(this).val(maxStock);
+                }
+
+                if (qty < 1 || isNaN(qty)) {
+                    e.preventDefault();
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: "error",
+                        title: "Jumlah Tidak Valid",
+                        text: "Jumlah minimal adalah 1 item"
+                    });
+                    $('.qty_display').val(1);
+                    return false;
+                }
+
+                if (maxStock === 0) {
+                    e.preventDefault();
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: "warning",
+                        title: "Stok Habis",
+                        text: "Maaf, produk ini sedang tidak tersedia"
+                    });
+                    return false;
+                }
+            });
 
             $('#form_review').submit(function(e) {
                 e.preventDefault();

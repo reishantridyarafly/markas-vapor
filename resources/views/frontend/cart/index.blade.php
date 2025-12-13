@@ -103,12 +103,18 @@
                                                                     class="input-counter__text input-counter--text-primary-style"
                                                                     type="text" id="qty" name="qty"
                                                                     value="{{ $item->quantity }}" data-min="1"
-                                                                    data-max="1000" data-id="{{ $item->id }}"
+                                                                    data-max="{{ $item->product->stock }}"
+                                                                    data-stock="{{ $item->product->stock }}"
+                                                                    data-id="{{ $item->id }}"
                                                                     data-price="{{ $item->product->after_price }}">
 
                                                                 <span class="input-counter__plus fas fa-plus"></span>
                                                             </div>
                                                             <!--====== End - Input Counter ======-->
+
+                                                            <small class="d-block text-muted mt-1">
+                                                                Stok: {{ $item->product->stock }}
+                                                            </small>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -185,6 +191,18 @@
                 }
             });
 
+            const Toast = Swal.mixin({
+                toast: true,
+                position: "top-end",
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.onmouseenter = Swal.stopTimer;
+                    toast.onmouseleave = Swal.resumeTimer;
+                }
+            });
+
             function formatRupiah(angka, prefix) {
                 var number_string = angka.toString().replace(/[^,\d]/g, ''),
                     split = number_string.split(','),
@@ -203,16 +221,25 @@
 
             function updateCartTotal() {
                 var total = 0;
+                var hasInvalidStock = false;
+
                 $('.check-box input[type="checkbox"]:checked').each(function() {
                     var $row = $(this).closest('tr');
-                    var quantity = parseInt($row.find('.input-counter__text').val());
-                    var price = parseFloat($row.find('.input-counter__text').data('price'));
-                    total += quantity * price;
+                    var $input = $row.find('.input-counter__text');
+                    var quantity = parseInt($input.val());
+                    var price = parseFloat($input.data('price'));
+                    var stock = parseInt($input.data('stock'));
+
+                    if (quantity > stock) {
+                        hasInvalidStock = true;
+                    } else {
+                        total += quantity * price;
+                    }
                 });
 
                 $('#cart-total').text(formatRupiah(total, 'Rp '));
 
-                if (total > 0) {
+                if (total > 0 && !hasInvalidStock) {
                     $('#checkout-btn').prop('disabled', false);
                 } else {
                     $('#checkout-btn').prop('disabled', true);
@@ -223,48 +250,259 @@
                 updateCartTotal();
             });
 
-            $('body').on('change', '.input-counter__text', function() {
-                var $this = $(this);
-                var id = $this.data('id');
-                var newQuantity = $this.val();
+            // Override event handler untuk tombol plus
+            $('body').off('click', '.input-counter__plus').on('click', '.input-counter__plus', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
 
+                var $input = $(this).siblings('.input-counter__text');
+                var currentQty = parseInt($input.val()) || 0;
+                var stock = parseInt($input.data('stock'));
+                var min = parseInt($input.data('min')) || 1;
+
+                if (currentQty >= stock) {
+                    Toast.fire({
+                        icon: 'warning',
+                        title: `Stok tersedia hanya ${stock} item`
+                    });
+                    return false;
+                }
+
+                var newQty = currentQty + 1;
+                if (newQty > stock) {
+                    newQty = stock;
+                    Toast.fire({
+                        icon: 'warning',
+                        title: `Stok tersedia hanya ${stock} item`
+                    });
+                }
+
+                $input.val(newQty);
+                $input.trigger('change');
+            });
+
+            // Override event handler untuk tombol minus
+            $('body').off('click', '.input-counter__minus').on('click', '.input-counter__minus', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var $input = $(this).siblings('.input-counter__text');
+                var currentQty = parseInt($input.val()) || 1;
+                var min = parseInt($input.data('min')) || 1;
+
+                if (currentQty > min) {
+                    $input.val(currentQty - 1);
+                    $input.trigger('change');
+                } else {
+                    Toast.fire({
+                        icon: 'warning',
+                        title: 'Jumlah minimal adalah 1 item'
+                    });
+                }
+            });
+
+            // Validasi saat input berubah (manual input atau dari tombol +/-)
+            $('body').off('input change', '.input-counter__text').on('input change', '.input-counter__text',
+                function(e) {
+                    var $this = $(this);
+                    var id = $this.data('id');
+                    var inputValue = $this.val().replace(/[^0-9]/g, ''); // Hanya angka
+                    var newQuantity = parseInt(inputValue) || 1;
+                    var stock = parseInt($this.data('stock'));
+                    var min = parseInt($this.data('min')) || 1;
+                    var productName = $this.closest('tr').find('.table-p__name a').text();
+                    var hasStockIssue = false;
+
+                    // Validasi minimal
+                    if (newQuantity < min) {
+                        Toast.fire({
+                            icon: 'error',
+                            title: 'Jumlah minimal adalah 1 item'
+                        });
+                        $this.val(min);
+                        newQuantity = min;
+                        return;
+                    }
+
+                    // Validasi stok
+                    if (newQuantity > stock) {
+                        hasStockIssue = true;
+                        $this.val(stock);
+                        newQuantity = stock;
+
+                        // Tampilkan notifikasi stok tidak cukup DULU
+                        Toast.fire({
+                            icon: 'error',
+                            title: 'Stok Tidak Cukup!',
+                            text: `${productName} hanya tersedia ${stock} item`
+                        }).then(function() {
+                            // SETELAH notifikasi stok selesai, baru update ke server
+                            if (e.type === 'change') {
+                                updateCartToServer($this, id, newQuantity);
+                            }
+                        });
+
+                        if (e.type !== 'change') {
+                            updateCartTotal();
+                        }
+                        return;
+                    }
+
+                    // Jika tidak ada masalah stok, langsung update
+                    if (e.type === 'change') {
+                        updateCartToServer($this, id, newQuantity, !hasStockIssue);
+                    } else {
+                        updateCartTotal();
+                    }
+                });
+
+            // Fungsi terpisah untuk update cart ke server
+            function updateCartToServer($input, id, quantity, showSuccessToast = true) {
                 $.ajax({
                     url: '/keranjang/edit/' + id,
                     type: 'POST',
                     data: {
                         id: id,
-                        quantity: newQuantity
+                        quantity: quantity
                     },
                     success: function(response) {
                         console.log(response.message);
+                        if (showSuccessToast) {
+                            Toast.fire({
+                                icon: 'success',
+                                title: 'Keranjang diperbarui'
+                            });
+                        }
                         updateCartTotal();
                     },
                     error: function(xhr, ajaxOptions, thrownError) {
-                        console.error(xhr.status + "\n" + xhr.responseText + "\n" +
-                            thrownError);
+                        if (xhr.status === 422) {
+                            let errorMsg = xhr.responseJSON.message || 'Stok tidak mencukupi';
+                            Toast.fire({
+                                icon: 'error',
+                                title: errorMsg
+                            });
+                            var stock = parseInt($input.data('stock'));
+                            $input.val(stock);
+                            updateCartTotal();
+                        } else {
+                            console.error(xhr.status + "\n" + xhr.responseText + "\n" + thrownError);
+                        }
                     }
                 });
+            }
+
+            // Prevent non-numeric input
+            $('body').on('keypress', '.input-counter__text', function(e) {
+                if (e.which < 48 || e.which > 57) {
+                    e.preventDefault();
+                }
             });
 
             $('body').on('click', '.remove', function(e) {
                 e.preventDefault();
                 var $this = $(this);
                 var id = $this.data('id');
+                var productName = $this.closest('tr').find('.table-p__name a').text();
 
-                $.ajax({
-                    url: '/keranjang/hapus/' + id,
-                    type: 'DELETE',
-                    success: function(response) {
-                        $this.closest('tr').remove();
-                        console.log(response.message);
-                        updateCartTotal();
-                        updateCartCount();
-                    },
-                    error: function(xhr, ajaxOptions, thrownError) {
-                        console.error(xhr.status + "\n" + xhr.responseText + "\n" +
-                            thrownError);
+                Swal.fire({
+                    title: 'Hapus Item?',
+                    text: `Apakah Anda yakin ingin menghapus "${productName}" dari keranjang?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/keranjang/hapus/' + id,
+                            type: 'DELETE',
+                            success: function(response) {
+                                $this.closest('tr').remove();
+                                console.log(response.message);
+                                Toast.fire({
+                                    icon: 'success',
+                                    title: 'Item berhasil dihapus'
+                                });
+                                updateCartTotal();
+                                updateCartCount();
+
+                                // Cek apakah keranjang kosong
+                                if ($('.table-p tbody tr').length === 0) {
+                                    $('.table-p tbody').html(
+                                        '<tr><td colspan="5" class="text-center">Data tidak tersedia</td></tr>'
+                                    );
+                                }
+                            },
+                            error: function(xhr, ajaxOptions, thrownError) {
+                                Toast.fire({
+                                    icon: 'error',
+                                    title: 'Gagal menghapus item'
+                                });
+                                console.error(xhr.status + "\n" + xhr.responseText +
+                                    "\n" + thrownError);
+                            }
+                        });
                     }
                 });
+            });
+
+            // Validasi sebelum checkout
+            $('body').on('submit', '.f-cart', function(e) {
+                var hasSelectedItems = $('.check-box input[type="checkbox"]:checked').length > 0;
+                var hasInvalidStock = false;
+                var invalidItems = [];
+
+                if (!hasSelectedItems) {
+                    e.preventDefault();
+                    Toast.fire({
+                        icon: 'warning',
+                        title: 'Pilih minimal 1 item untuk checkout'
+                    });
+                    return false;
+                }
+
+                // Cek setiap item yang dipilih
+                $('.check-box input[type="checkbox"]:checked').each(function() {
+                    var $row = $(this).closest('tr');
+                    var $input = $row.find('.input-counter__text');
+                    var quantity = parseInt($input.val());
+                    var stock = parseInt($input.data('stock'));
+                    var productName = $row.find('.table-p__name a').text();
+
+                    if (quantity > stock || stock === 0) {
+                        hasInvalidStock = true;
+                        invalidItems.push({
+                            name: productName,
+                            quantity: quantity,
+                            stock: stock
+                        });
+                    }
+                });
+
+                if (hasInvalidStock) {
+                    e.preventDefault();
+
+                    let errorMessage = 'Item berikut melebihi stok yang tersedia:<br><br>';
+                    invalidItems.forEach(function(item) {
+                        if (item.stock === 0) {
+                            errorMessage += `<strong>${item.name}</strong>: Stok habis<br>`;
+                        } else {
+                            errorMessage +=
+                                `<strong>${item.name}</strong>: Anda pilih ${item.quantity}, tersedia ${item.stock}<br>`;
+                        }
+                    });
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Stok Tidak Mencukupi',
+                        html: errorMessage,
+                        confirmButtonColor: '#3085d6',
+                    });
+                    return false;
+                }
             });
 
             updateCartTotal();
